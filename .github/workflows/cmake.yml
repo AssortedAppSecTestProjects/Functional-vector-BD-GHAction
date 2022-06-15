@@ -1,4 +1,4 @@
-## change made to allow commit 1
+## change made to allow commit 2
 ## Commented out windows and mac build options 
 ## cloned from https://github.com/jkalias/functional_vector  to work with gitub actions and black duck on a C/C++ project 
 # Heavily inspired (i.e. copy/paste) from https://gist.github.com/NickNaso/0d478f1481686d5bcc868cac06620a60
