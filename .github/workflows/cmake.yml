@@ -129,6 +129,18 @@ jobs:
             -DCMAKE_CXX_STANDARD=17 \
             -G "${{ matrix.config.generators }}"
 
+
+      # Set up Python 3.8 & download, cache blackduck-c-cpp
+      - name: Setup python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
+          cache: 'pip'
+      - run: pip install blackduck-c-cpp -r requirements.txt
+
+
+
+
       - name: Build
         shell: bash
         run: cmake --build build --config ${{ matrix.config.build_type }}
@@ -190,3 +202,37 @@ jobs:
 #        with:
 #          args: --blackduck.url="${{ secrets.TEST_BLACKDUCK_URL}}" --blackduck.api.token="${{ secrets.TEST_BLACKDUCK_API_TOKEN}}" 
 
+
+      # TODO: To replace sleep with checkin scan status and sleep
+      - name: Sleep for 60s
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 60s
+
+      # Execute script to get blackduck-c-cpp reults and generate a SARIF file
+      - name: Generate SARIF file
+        working-directory: ./python
+        run: >
+          python sca_to_sarif_generation.py
+          -b "$BD_URL"
+          -t "$API_TOKEN"
+          -p "$PROJECT_NAME"
+          -r "$GITHUB_RUN_NUMBER"
+          -s "results.sarif"
+          -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/cpp-test/src/main/BUILD"
+      # Upload the generated SARIF file
+      - name: Upload SARIF file
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-sca-sarif 
+          path: ./python/results.sarif
+          
+      # Upload the generated SARIF file to Code Scanning 
+      - name: Upload SARIF file to Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: ./python/results.sarif
+          # Optional category for the results
+          # Used to differentiate multiple results for one commit
+          category: my-sca-tool
