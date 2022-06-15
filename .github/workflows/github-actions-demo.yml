@@ -41,7 +41,7 @@ jobs:
       
       # Execute test by blackduck-c-cpp
       - name: Test by blackduck-c-cpp
-        working-directory: ./cpp-test/src
+        working-directory: ./src
         env:
           COV_CONFIG: '{"clang++-12": "clangcxx", "clang-12": "clangcc"}'
           BUILD_CMD: 'bazel clean; bazel build --config=clang_config --sandbox_debug //main:hello-world'
@@ -51,7 +51,7 @@ jobs:
           --build_cmd="$BUILD_CMD"
           --project_name="$PROJECT_NAME"
           --project_version="$GITHUB_RUN_NUMBER"
-          --build_dir="$GITHUB_WORKSPACE/cpp-test/src"
+          --build_dir="$GITHUB_WORKSPACE/src"
           --bd_url="$BD_URL"
           --api_token="$API_TOKEN"
 
@@ -71,7 +71,7 @@ jobs:
           -p "$PROJECT_NAME"
           -r "$GITHUB_RUN_NUMBER"
           -s "results.sarif"
-          -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/cpp-test/src/main/BUILD"
+          -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/src/main/BUILD"
 
       # Upload the generated SARIF file
       - name: Upload SARIF file
