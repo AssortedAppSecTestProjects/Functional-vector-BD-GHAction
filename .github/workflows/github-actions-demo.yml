@@ -1,0 +1,91 @@
+name: Github Actions Bazel Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BD_URL: ${{ secrets.BLACKDUCK_URL }}
+      PROJECT_NAME: 'SLS-Functional-Vector-BD-GHA-C-CPP-Test'
+      API_TOKEN: ${{ secrets.BLACKDUCK_TESTSERVER_TOKEN }} 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up JDK 11 in runtime environment for running the Detect tool (invoked by the
+      # detect plugin)
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      # Set up Python 3.8 & download, cache blackduck-c-cpp
+      - name: Setup python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
+          cache: 'pip'
+      - run: pip install blackduck-c-cpp -r requirements.txt
+
+      # Remove the comment below when want to start a debugging ssh session here
+      #  uses: lhotari/action-upterm@v1
+      
+      # Execute test by blackduck-c-cpp
+      - name: Test by blackduck-c-cpp
+        working-directory: ./cpp-test/src
+        env:
+          COV_CONFIG: '{"clang++-12": "clangcxx", "clang-12": "clangcc"}'
+          BUILD_CMD: 'bazel clean; bazel build --config=clang_config --sandbox_debug //main:hello-world'
+        run: >
+          blackduck-c-cpp
+          --cov_configure_args="$COV_CONFIG"
+          --build_cmd="$BUILD_CMD"
+          --project_name="$PROJECT_NAME"
+          --project_version="$GITHUB_RUN_NUMBER"
+          --build_dir="$GITHUB_WORKSPACE/cpp-test/src"
+          --bd_url="$BD_URL"
+          --api_token="$API_TOKEN"
+
+      # TODO: To replace sleep with checkin scan status and sleep
+      - name: Sleep for 60s
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 60s
+
+      # Execute script to get blackduck-c-cpp reults and generate a SARIF file
+      - name: Generate SARIF file
+        working-directory: ./python
+        run: >
+          python sca_to_sarif_generation.py
+          -b "$BD_URL"
+          -t "$API_TOKEN"
+          -p "$PROJECT_NAME"
+          -r "$GITHUB_RUN_NUMBER"
+          -s "results.sarif"
+          -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/cpp-test/src/main/BUILD"
+
+      # Upload the generated SARIF file
+      - name: Upload SARIF file
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-sca-sarif 
+          path: ./python/results.sarif
+          
+      # Upload the generated SARIF file to Code Scanning 
+      - name: Upload SARIF file to Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: ./python/results.sarif
+          # Optional category for the results
+          # Used to differentiate multiple results for one commit
+          category: my-sca-tool
