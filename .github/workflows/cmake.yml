@@ -1,6 +1,6 @@
-## change made to allow commit 2
-## Commented out windows and mac build options 
-## cloned from https://github.com/jkalias/functional_vector  to work with gitub actions and black duck on a C/C++ project 
+## change to trigger scan 3
+## cloned from https://github.com/jkalias/functional_vector to get practicve with executing github actions with C++ 
+## commented out mac & windows to simplify build process 
 # Heavily inspired (i.e. copy/paste) from https://gist.github.com/NickNaso/0d478f1481686d5bcc868cac06620a60
 name: CMake Build Matrix
 
@@ -133,25 +133,25 @@ jobs:
         shell: bash
         run: cmake --build build --config ${{ matrix.config.build_type }}
 
-      - name: Run tests on Windows
-        if: startsWith(matrix.config.os, 'windows')
-        shell: bash
-        run: |
-          status=$?
-          cmd="build/bin/${{ matrix.config.build_type }}/unit_tests"
-          $cmd
-          status=$?
-          [ $status -eq 0 ] && exit 0 || exit 1
+#      - name: Run tests on Windows
+#        if: startsWith(matrix.config.os, 'windows')
+#        shell: bash
+#        run: |
+#          status=$?
+#          cmd="build/bin/${{ matrix.config.build_type }}/unit_tests"
+#          $cmd
+#          status=$?
+#          [ $status -eq 0 ] && exit 0 || exit 1
           
-      - name: Run tests on macos
-        if: startsWith(matrix.config.os, 'macos')
-        shell: bash
-        run: |
-          status=$?
-          cmd="build/tests/${{ matrix.config.build_type }}/unit_tests"
-          $cmd
-          status=$?
-          [ $status -eq 0 ] && exit 0 || exit 1
+#      - name: Run tests on macos
+#        if: startsWith(matrix.config.os, 'macos')
+#        shell: bash
+#        run: |
+#          status=$?
+#          cmd="build/tests/${{ matrix.config.build_type }}/unit_tests"
+#          $cmd
+#          status=$?
+#          [ $status -eq 0 ] && exit 0 || exit 1
         
       - name: Run tests on Ubuntu
         if: startsWith(matrix.config.name, 'Ubuntu Latest GCC')
@@ -162,3 +162,31 @@ jobs:
           $cmd
           status=$?
           [ $status -eq 0 ] && exit 0 || exit 1
+
+      - name: Create Black Duck Policy
+#        env:
+#          NODE_EXTRA_CA_CERTS: ${{ secrets.LOCAL_CA_CERT_PATH }}
+        uses: blackducksoftware/create-policy-action@v0.0.1
+        with:
+          blackduck-url: ${{ secrets.TEST_BLACKDUCK_URL }}
+          blackduck-api-token: ${{ secrets.TEST_BLACKDUCK_API_TOKEN }}
+          policy-name: 'My Black Duck Policy For GitHub Actions'
+          no-fail-if-policy-exists: true
+
+      - name: Synopsys Detect action 3.0
+        uses: synopsys-sig/detect-action@v0.3.0
+#         env:
+#         NODE_EXTRA_CA_CERTS: ${{ secrets.LOCAL_CA_CERT_PATH }}
+        with:
+#          scan-mode: INTELLIGENT # RAPID is the default value - can be excluded 
+          scan-mode: RAPID # RAPID is the default value - can be excluded 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          detect-version: 7.9.0
+          blackduck-url: ${{ secrets.TEST_BLACKDUCK_URL }}
+          blackduck-api-token: ${{ secrets.TEST_BLACKDUCK_API_TOKEN }}
+
+#      - name: Synopsys Detect action 2.0
+#        uses: blackducksoftware/github-action@2.0.0
+#        with:
+#          args: --blackduck.url="${{ secrets.TEST_BLACKDUCK_URL}}" --blackduck.api.token="${{ secrets.TEST_BLACKDUCK_API_TOKEN}}" 
+
